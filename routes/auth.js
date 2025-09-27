@@ -8,7 +8,7 @@ const { query, validationResult, body } = require('express-validator');
 // Create a user using: POST "/api/auth/". Doesn't required auth to access this route
 
 
-router.post('/',[
+router.post('/', [
     body('name', 'Enter a valid name').isLength({ min: 3 }),
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password must be atleast 5 characters').isLength({ min: 5 }),
@@ -17,18 +17,29 @@ router.post('/',[
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    // Create a user
-    // const user = new User(req.body);
-    // await user.save();
-    User.create({
-        username: req.body.username,
-        password: req.body.password,
-    }).then(user => res.json(user));
-    res.send(req.body);
-})
+    try {
+        // Prevent duplicate email
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already exists' });
+        }
+        // Create and save user
+        const user = new User({
+            name: req.body.name,
+            email: req.body.email,
+            password: req.body.password
+        });
+        await user.save();
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+module.exports = router
 
 
 
+// //////////////////////////////////////////////////
 // async (req, res) => {
 //     console.log(req.body);
 //     try {
@@ -60,4 +71,7 @@ router.post('/',[
 // })
 
 
-module.exports = router
+
+//////////////////////
+// res.send(req.body);
+
